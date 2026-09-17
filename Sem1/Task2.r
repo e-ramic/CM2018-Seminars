@@ -107,8 +107,58 @@ cat("GM (treated group):", GM_treatment, "\n")
 
 # And the ratio between them
 GM_ratio <- GM_treatment / GM_control
-cat("GM Ratio:", GM_Ratio, "\n")
+cat("GM Ratio:", GM_ratio, "\n")
 
 # We can aslo convert to percentage:
 percent_reduction <- (1 - GM_ratio) * 100
 cat("Percentage reduction:", percent_reduction, "\n")
+
+# The confidence interval ratio gives us approx. 0.70 and 0.84.
+# This means the treated groups GM NfL is estimated to be between 70% and 84% of
+# the control group's geometric mean.
+ratio_CI <- exp(t_test$conf.int)
+ratio_CI
+
+
+
+# Investigating replication of the study
+set.seed(456)
+
+n_rep <- 1000
+
+p_values <- numeric(n_rep)
+GM_ratios <- numeric(n_rep)
+
+for (i in 1:n_rep) {
+
+  # Generate another trial
+  d <- hpd_trial_data(177)
+
+  # Log transform
+  d$logNfL <- log(d$NfL)
+
+  # Separate groups
+  control <- d$logNfL[d$Group == 0]
+  treatment <- d$logNfL[d$Group == 1]
+
+  # T-test
+  test <- t.test(treatment, control)
+
+  # Save p-value
+  p_values[i] <- test$p.value
+
+  # Save ratio of geometric means
+  GM_ratios[i] <-
+    exp(mean(treatment)) / exp(mean(control))
+}
+mean(p_values < 0.05)
+summary(GM_ratios)
+quantile(GM_ratios, c(0.025, 0.5, 0.975))
+
+hist(
+  GM_ratios,
+  main = "Estimated treatment effect across replicated studies",
+  xlab = "Geometric mean ratio"
+)
+
+abline(v = 0.8, lty = 2)
